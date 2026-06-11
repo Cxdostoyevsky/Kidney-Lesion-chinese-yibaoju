@@ -27,6 +27,7 @@ def apply_dints_memory_overrides(work_dir: Path, config_parser: type) -> None:
     config = config_parser.load_config_file(config_path)
     config["training"].update(
         {
+            "adapt_valid_mode": False,
             "auto_scale_allowed": False,
             "num_cache_workers": 2,
             "num_workers": 2,
@@ -36,6 +37,22 @@ def apply_dints_memory_overrides(work_dir: Path, config_parser: type) -> None:
             "num_patches_per_iter": 20,
         }
     )
+    config_parser.export_config_file(
+        config,
+        config_path,
+        fmt="yaml",
+        default_flow_style=None,
+        sort_keys=False,
+    )
+
+
+def disable_adaptive_validation(work_dir: Path, config_parser: type) -> None:
+    config_path = work_dir / "swinunetr_0" / "configs" / "hyper_parameters.yaml"
+    if not config_path.is_file():
+        raise FileNotFoundError(f"SwinUNETR config not found: {config_path}")
+
+    config = config_parser.load_config_file(config_path)
+    config["adapt_valid_mode"] = False
     config_parser.export_config_file(
         config,
         config_path,
@@ -64,7 +81,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--templates", type=Path, default=DEFAULT_TEMPLATES)
     parser.add_argument("--gpus", default="0,1")
     parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--validation-interval", type=int, default=5)
+    parser.add_argument("--validation-interval", type=int, default=1)
     return parser.parse_args()
 
 
@@ -108,10 +125,12 @@ def main() -> None:
         if missing:
             raise RuntimeError(f"Bundle generation did not create: {', '.join(missing)}")
         apply_dints_memory_overrides(work_dir, ConfigParser)
+        disable_adaptive_validation(work_dir, ConfigParser)
         print(f"Prepared four bundles in {work_dir}")
         return
 
     apply_dints_memory_overrides(work_dir, ConfigParser)
+    disable_adaptive_validation(work_dir, ConfigParser)
     runner.train = None
     runner.run()
 
