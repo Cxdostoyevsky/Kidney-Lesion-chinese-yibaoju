@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
 
 
@@ -49,6 +50,8 @@ def main() -> None:
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ["SEGRESNET2D_ALWAYS"] = "1"
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+    env_bin = str(Path(sys.executable).parent)
+    os.environ["PATH"] = f"{env_bin}{os.pathsep}{os.environ.get('PATH', '')}"
 
     from monai.apps.auto3dseg import AutoRunner
     from monai.bundle import ConfigParser
