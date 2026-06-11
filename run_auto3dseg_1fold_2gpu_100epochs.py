@@ -10,6 +10,11 @@ DEFAULT_INPUT = Path(
     "/hdd/common/datasets/medical-image-analysis/3D_kindey_lesion_changzhou/"
     "kidney_lesion_modellllllllll/autoseg/input_1fold_full_auto3dseg.yaml"
 )
+DEFAULT_TEMPLATES = Path(
+    "/hdd/common/datasets/medical-image-analysis/3D_kindey_lesion_changzhou/"
+    "kidney_lesion_modellllllllll/autoseg/monai_algo_templates_21ed8e5/"
+    "algorithm_templates"
+)
 EXPECTED_BUNDLES = ("dints_0", "segresnet_0", "segresnet2d_0", "swinunetr_0")
 
 
@@ -29,6 +34,7 @@ def parse_args() -> argparse.Namespace:
         help="Train all generated bundles for 100 epochs.",
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
+    parser.add_argument("--templates", type=Path, default=DEFAULT_TEMPLATES)
     parser.add_argument("--gpus", default="0,1")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--validation-interval", type=int, default=5)
@@ -42,15 +48,20 @@ def main() -> None:
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ["SEGRESNET2D_ALWAYS"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
 
     from monai.apps.auto3dseg import AutoRunner
     from monai.bundle import ConfigParser
+
+    if not args.templates.is_dir():
+        raise FileNotFoundError(f"Auto3DSeg templates not found: {args.templates}")
 
     input_config = ConfigParser.load_config_file(args.input)
     work_dir = Path(input_config["work_dir"])
 
     runner = AutoRunner(input=str(args.input), allow_skip=False)
     runner.algos = ["dints", "segresnet", "segresnet2d", "swinunetr"]
+    runner.templates_path_or_url = str(args.templates)
     runner.allow_skip = False
     runner.ensemble = False
     runner.set_device_info(cuda_visible_devices=args.gpus)
