@@ -19,6 +19,32 @@ DEFAULT_TEMPLATES = Path(
 EXPECTED_BUNDLES = ("dints_0", "segresnet_0", "segresnet2d_0", "swinunetr_0")
 
 
+def apply_dints_memory_overrides(work_dir: Path, config_parser: type) -> None:
+    config_path = work_dir / "dints_0" / "configs" / "hyper_parameters.yaml"
+    if not config_path.is_file():
+        raise FileNotFoundError(f"DiNTS config not found: {config_path}")
+
+    config = config_parser.load_config_file(config_path)
+    config["training"].update(
+        {
+            "auto_scale_allowed": False,
+            "num_cache_workers": 2,
+            "num_workers": 2,
+            "num_workers_validation": 1,
+            "num_images_per_batch": 1,
+            "num_crops_per_image": 40,
+            "num_patches_per_iter": 20,
+        }
+    )
+    config_parser.export_config_file(
+        config,
+        config_path,
+        fmt="yaml",
+        default_flow_style=None,
+        sort_keys=False,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Prepare or train the one-fold, four-model Auto3DSeg experiment."
@@ -81,9 +107,11 @@ def main() -> None:
         missing = [name for name in EXPECTED_BUNDLES if not (work_dir / name).is_dir()]
         if missing:
             raise RuntimeError(f"Bundle generation did not create: {', '.join(missing)}")
+        apply_dints_memory_overrides(work_dir, ConfigParser)
         print(f"Prepared four bundles in {work_dir}")
         return
 
+    apply_dints_memory_overrides(work_dir, ConfigParser)
     runner.train = None
     runner.run()
 
