@@ -57,12 +57,12 @@ while true; do
     printf '%s\n' "${gpu_status}" |
       awk -F',' -v minimum="${MIN_FREE_MIB}" '
         {
-          index = $1
-          free = $5
-          gsub(/[[:space:]]/, "", index)
-          gsub(/[[:space:]]/, "", free)
-          if (free > minimum) {
-            print free, index
+          gpu_index = $1
+          free_mib = $5
+          gsub(/[[:space:]]/, "", gpu_index)
+          gsub(/[[:space:]]/, "", free_mib)
+          if (free_mib > minimum) {
+            print free_mib, gpu_index
           }
         }
       ' |
