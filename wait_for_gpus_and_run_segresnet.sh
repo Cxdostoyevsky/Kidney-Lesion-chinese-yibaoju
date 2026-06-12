@@ -61,7 +61,7 @@ while true; do
           free_mib = $5
           gsub(/[[:space:]]/, "", gpu_index)
           gsub(/[[:space:]]/, "", free_mib)
-          if (free_mib > minimum) {
+          if ((free_mib + 0) > (minimum + 0)) {
             print free_mib, gpu_index
           }
         }
