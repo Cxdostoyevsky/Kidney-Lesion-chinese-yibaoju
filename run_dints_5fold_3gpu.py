@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -101,6 +102,20 @@ def configure_bundles(
         )
 
 
+def ensure_history_compatibility(work_dir: Path) -> None:
+    for bundle_name in EXPECTED_BUNDLES:
+        history_path = work_dir / bundle_name / "algo_object.json"
+        with history_path.open(encoding="utf-8") as stream:
+            history = json.load(stream)
+
+        template_path = history.get("template_path")
+        state = history.setdefault("_state_", {})
+        if template_path and not state.get("template_path"):
+            state["template_path"] = template_path
+            with history_path.open("w", encoding="utf-8") as stream:
+                json.dump(history, stream, ensure_ascii=False, separators=(",", ":"))
+
+
 def main() -> None:
     args = parse_args()
     if args.epochs <= 0 or args.validation_interval <= 0:
@@ -158,6 +173,7 @@ def main() -> None:
             args.epochs,
             args.validation_interval,
         )
+        ensure_history_compatibility(work_dir)
         train_runner = AutoRunner(
             input=str(args.input),
             algos=["dints"],
