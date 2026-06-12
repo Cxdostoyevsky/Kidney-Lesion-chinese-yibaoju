@@ -99,6 +99,7 @@ def configure_bundles(
         config = config_parser.load_config_file(config_path)
         config["training"].update(
             {
+                "adapt_valid_mode": False,
                 "auto_scale_allowed": False,
                 "num_epochs": epochs,
                 "num_epochs_per_validation": validation_interval,
