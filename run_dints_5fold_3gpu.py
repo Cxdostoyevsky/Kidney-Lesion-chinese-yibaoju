@@ -39,11 +39,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--gpus", default="2,4,6")
     parser.add_argument("--epochs", type=int, default=500)
-    parser.add_argument("--validation-interval", type=int, default=4)
+    parser.add_argument("--validation-interval", type=int, default=1)
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=6,
+        default=12,
         help="Number of cropped patches processed per optimizer iteration and GPU.",
     )
     return parser.parse_args()
