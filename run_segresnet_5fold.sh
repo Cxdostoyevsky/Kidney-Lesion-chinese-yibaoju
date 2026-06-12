@@ -6,7 +6,7 @@ WORK_DIR="${WORK_DIR:-${AUTOSEG_ROOT}/segresnet3D_5fold}"
 PYTHON="${PYTHON:-/ssd/chenxi/anaconda3/envs/nnunet/bin/python}"
 TORCHRUN="${TORCHRUN:-/ssd/chenxi/anaconda3/envs/nnunet/bin/torchrun}"
 MASTER_PORT_BASE="${MASTER_PORT_BASE:-29541}"
-TMPDIR="${SEGRESNET_TMPDIR:-/dev/shm/chenxi-segresnet-tmp}"
+TMPDIR="${SEGRESNET_TMPDIR:-/dev/shm/user-segresnet-tmp}"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1,2,3,4,5}"
 export MLFLOW_ALLOW_FILE_STORE="${MLFLOW_ALLOW_FILE_STORE:-true}"
