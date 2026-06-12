@@ -89,8 +89,15 @@ def configure_bundles(
         config = config_parser.load_config_file(config_path)
         config["training"].update(
             {
+                "auto_scale_allowed": False,
                 "num_epochs": epochs,
                 "num_epochs_per_validation": validation_interval,
+                "num_cache_workers": 2,
+                "num_workers": 2,
+                "num_workers_validation": 1,
+                "num_images_per_batch": 3,
+                "num_crops_per_image": 6,
+                "num_patches_per_iter": 3,
             }
         )
         config_parser.export_config_file(
