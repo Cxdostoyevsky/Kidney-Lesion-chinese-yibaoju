@@ -6,10 +6,15 @@ WORK_DIR="${WORK_DIR:-${AUTOSEG_ROOT}/segresnet3D_5fold}"
 PYTHON="${PYTHON:-/ssd/chenxi/anaconda3/envs/nnunet/bin/python}"
 TORCHRUN="${TORCHRUN:-/ssd/chenxi/anaconda3/envs/nnunet/bin/torchrun}"
 MASTER_PORT_BASE="${MASTER_PORT_BASE:-29541}"
+TMPDIR="${SEGRESNET_TMPDIR:-/dev/shm/chenxi-segresnet-tmp}"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1,2,3,4,5}"
 export MLFLOW_ALLOW_FILE_STORE="${MLFLOW_ALLOW_FILE_STORE:-true}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+export TMPDIR
+
+mkdir -p "${TMPDIR}"
+chmod 700 "${TMPDIR}"
 
 IFS=',' read -r -a visible_gpus <<< "${CUDA_VISIBLE_DEVICES}"
 NPROC_PER_NODE="${#visible_gpus[@]}"
@@ -100,6 +105,7 @@ echo "[$(date '+%F %T')] Starting sequential SegResNet 5-fold training."
 echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}; processes=${NPROC_PER_NODE}"
 echo "MLFLOW_ALLOW_FILE_STORE=${MLFLOW_ALLOW_FILE_STORE}"
 echo "PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF}"
+echo "TMPDIR=${TMPDIR}"
 nvidia-smi --query-gpu=index,name,memory.used,memory.free,utilization.gpu --format=csv,noheader
 
 for fold in 0 1 2 3 4; do
