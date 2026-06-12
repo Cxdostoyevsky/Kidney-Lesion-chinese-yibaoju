@@ -37,9 +37,15 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_STATS_DIR,
         help="Directory containing datastats.yaml for the same dataset.",
     )
-    parser.add_argument("--gpus", default="3,5,7")
+    parser.add_argument("--gpus", default="2,4,6")
     parser.add_argument("--epochs", type=int, default=500)
     parser.add_argument("--validation-interval", type=int, default=4)
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=6,
+        help="Number of cropped patches processed per optimizer iteration and GPU.",
+    )
     return parser.parse_args()
 
 
@@ -78,7 +84,11 @@ def validate_reusable_stats(
 
 
 def configure_bundles(
-    work_dir: Path, config_parser: type, epochs: int, validation_interval: int
+    work_dir: Path,
+    config_parser: type,
+    epochs: int,
+    validation_interval: int,
+    batch_size: int,
 ) -> None:
     missing = [name for name in EXPECTED_BUNDLES if not (work_dir / name).is_dir()]
     if missing:
@@ -96,8 +106,8 @@ def configure_bundles(
                 "num_workers": 2,
                 "num_workers_validation": 1,
                 "num_images_per_batch": 3,
-                "num_crops_per_image": 6,
-                "num_patches_per_iter": 3,
+                "num_crops_per_image": 2 * batch_size,
+                "num_patches_per_iter": batch_size,
             }
         )
         config_parser.export_config_file(
@@ -125,8 +135,8 @@ def ensure_history_compatibility(work_dir: Path) -> None:
 
 def main() -> None:
     args = parse_args()
-    if args.epochs <= 0 or args.validation_interval <= 0:
-        raise ValueError("Epoch counts and validation interval must be positive.")
+    if args.epochs <= 0 or args.validation_interval <= 0 or args.batch_size <= 0:
+        raise ValueError("Epoch counts, validation interval, and batch size must be positive.")
 
     os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
     os.environ.setdefault("MONAI_ALLOW_PICKLE", "1")
@@ -170,6 +180,7 @@ def main() -> None:
             ConfigParser,
             args.epochs,
             args.validation_interval,
+            args.batch_size,
         )
         print(f"Prepared five DiNTS bundles in {work_dir}", flush=True)
 
@@ -179,6 +190,7 @@ def main() -> None:
             ConfigParser,
             args.epochs,
             args.validation_interval,
+            args.batch_size,
         )
         ensure_history_compatibility(work_dir)
         train_runner = AutoRunner(
