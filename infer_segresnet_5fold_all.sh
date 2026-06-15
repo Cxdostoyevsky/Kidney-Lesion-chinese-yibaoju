@@ -11,6 +11,7 @@ LOG_ROOT="${LOG_ROOT:-${WORK_DIR}/inference_logs}"
 GPU_LIST="${GPU_LIST:-1,2,3,4,5}"
 TMP_ROOT="${TMP_ROOT:-/dev/shm/user-segresnet-infer}"
 FORCE="${FORCE:-0}"
+PREPARE_ONLY="${PREPARE_ONLY:-0}"
 
 export MLFLOW_ALLOW_FILE_STORE="${MLFLOW_ALLOW_FILE_STORE:-true}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
@@ -74,6 +75,11 @@ with output_path.open("w", encoding="utf-8") as stream:
 
 print(f"Prepared {len(testing)} testing samples in {output_path}")
 PY
+
+if [[ "${PREPARE_ONLY}" == "1" ]]; then
+  echo "PREPARE_ONLY=1; inference was not started."
+  exit 0
+fi
 
 mkdir -p "${OUTPUT_ROOT}" "${LOG_ROOT}" "${TMP_ROOT}"
 chmod 700 "${TMP_ROOT}"
