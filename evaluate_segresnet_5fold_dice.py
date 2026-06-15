@@ -66,7 +66,12 @@ def evaluate_case(task: dict) -> dict:
     }
     if "validation_fold" in task:
         result["validation_fold"] = task["validation_fold"]
-    for key in ("original_study_id", "base_study_id", "mask_variant"):
+    for key in (
+        "original_study_id",
+        "base_study_id",
+        "mask_variant",
+        "label_source",
+    ):
         if key in task:
             result[key] = task[key]
 
@@ -172,6 +177,13 @@ def build_internal_tasks(args: argparse.Namespace) -> list[dict]:
 def build_external_tasks(args: argparse.Namespace) -> list[dict]:
     datalist_path = args.work_dir / "cz2_ce_positive_auto3dseg_datalist.json"
     datalist = json.loads(datalist_path.read_text(encoding="utf-8"))
+    mapping_path = args.external_root / "nnunet_mapping" / "mapping.json"
+    mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
+    pseudo_label_cases = {
+        correction["case_id"]
+        for correction in mapping.get("label_corrections", [])
+        if correction.get("method", "").startswith("majority vote of five SegResNet")
+    }
     tasks = []
     for case in datalist["testing"]:
         image_path = Path(case["image"][0])
@@ -181,6 +193,11 @@ def build_external_tasks(args: argparse.Namespace) -> list[dict]:
                 "original_study_id": case["original_study_id"],
                 "base_study_id": case["base_study_id"],
                 "mask_variant": case["mask_variant"],
+                "label_source": (
+                    "segresnet_3of5_pseudo_label"
+                    if case["case_id"] in pseudo_label_cases
+                    else "original_manual_label"
+                ),
                 "label": str(args.external_root / "labelsTr" / f"{case['case_id']}.nii.gz"),
                 "predictions": [
                     str(
@@ -246,6 +263,22 @@ def main() -> None:
     external_summary["ensemble_majority_vote"] = summarize(
         external_rows, "ensemble"
     )
+    independent_external_rows = [
+        row
+        for row in external_rows
+        if row["label_source"] == "original_manual_label"
+    ]
+    write_csv(
+        output_dir / "external_cz2_positive_independent_per_case.csv",
+        independent_external_rows,
+    )
+    independent_external_summary = {
+        f"fold{fold}": summarize(independent_external_rows, f"fold{fold}")
+        for fold in range(5)
+    }
+    independent_external_summary["ensemble_majority_vote"] = summarize(
+        independent_external_rows, "ensemble"
+    )
 
     summary = {
         "metric_definition": {
@@ -254,10 +287,15 @@ def main() -> None:
             "macro_mean_dice": "unweighted mean of per-case Dice",
             "micro_dice": "Dice from TP/FP/FN pooled across all cases",
             "ensemble": "foreground predicted by at least 3 of 5 folds",
+            "pseudo_label_warning": (
+                "Cases whose labels were generated from these SegResNet predictions "
+                "are circular and must be excluded from independent validation."
+            ),
         },
         "internal_all_936_per_model": internal_all_summary,
         "internal_oof": internal_oof_summary,
         "external_cz2_positive_247": external_summary,
+        "external_cz2_positive_independent_246": independent_external_summary,
     }
     summary_path = output_dir / "summary.json"
     summary_path.write_text(
@@ -268,6 +306,10 @@ def main() -> None:
         ("internal_all_936_per_model", internal_all_summary),
         ("internal_oof", internal_oof_summary),
         ("external_cz2_positive_247", external_summary),
+        (
+            "external_cz2_positive_independent_246",
+            independent_external_summary,
+        ),
     ):
         for model, metrics in dataset_summary.items():
             summary_rows.append({"dataset": dataset, "model": model, **metrics})
