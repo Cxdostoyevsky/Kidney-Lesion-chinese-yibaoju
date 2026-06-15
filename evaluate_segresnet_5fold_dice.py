@@ -263,6 +263,15 @@ def main() -> None:
     summary_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    summary_rows = []
+    for dataset, dataset_summary in (
+        ("internal_all_936_per_model", internal_all_summary),
+        ("internal_oof", internal_oof_summary),
+        ("external_cz2_positive_247", external_summary),
+    ):
+        for model, metrics in dataset_summary.items():
+            summary_rows.append({"dataset": dataset, "model": model, **metrics})
+    write_csv(output_dir / "summary.csv", summary_rows)
 
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
     print(f"Saved evaluation files to {output_dir}", flush=True)
