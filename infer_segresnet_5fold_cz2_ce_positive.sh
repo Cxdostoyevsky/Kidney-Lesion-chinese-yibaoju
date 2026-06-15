@@ -7,10 +7,7 @@ EXTERNAL_ROOT="${EXTERNAL_ROOT:-/hdd/common/datasets/medical-image-analysis/3D_k
 DATALIST="${DATALIST:-${WORK_DIR}/cz2_ce_positive_auto3dseg_datalist.json}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${WORK_DIR}/predictions_cz2_ce_positive_5fold}"
 LOG_ROOT="${LOG_ROOT:-${WORK_DIR}/inference_logs_cz2_ce_positive}"
-TRAINING_DATALIST="${TRAINING_DATALIST:-${WORK_DIR}/cz1_cy_auto3dseg_datalist_all_testing.json}"
 GPU="${GPU:-0}"
-MIN_FREE_MIB="${MIN_FREE_MIB:-30000}"
-POLL_SECONDS="${POLL_SECONDS:-60}"
 TMP_ROOT="${TMP_ROOT:-/dev/shm/user-segresnet-cz2-ce-positive}"
 FORCE="${FORCE:-0}"
 
@@ -62,32 +59,6 @@ done
 
 mkdir -p "${OUTPUT_ROOT}" "${LOG_ROOT}" "${TMP_ROOT}"
 chmod 700 "${TMP_ROOT}"
-
-while pgrep -f "segresnet_[0-4]/scripts/infer.py.*${TRAINING_DATALIST}" >/dev/null; do
-  counts=()
-  for fold in 0 1 2 3 4; do
-    count="$(find "${WORK_DIR}/predictions_all_5fold/fold${fold}" -type f -name '*.nii.gz' 2>/dev/null | wc -l)"
-    counts+=("fold${fold}=${count}")
-  done
-  echo "[$(date '+%F %T')] Training-set inference is still running (${counts[*]})."
-  echo "Waiting ${POLL_SECONDS} seconds before checking again."
-  sleep "${POLL_SECONDS}"
-done
-
-while true; do
-  free_mib="$(
-    nvidia-smi \
-      --id="${GPU}" \
-      --query-gpu=memory.free \
-      --format=csv,noheader,nounits |
-      tr -d '[:space:]'
-  )"
-  if [[ "${free_mib}" =~ ^[0-9]+$ ]] && ((free_mib >= MIN_FREE_MIB)); then
-    break
-  fi
-  echo "[$(date '+%F %T')] GPU ${GPU} has ${free_mib:-unknown} MiB free; need ${MIN_FREE_MIB} MiB."
-  sleep "${POLL_SECONDS}"
-done
 
 echo "[$(date '+%F %T')] Starting CZ2 CE positive-only five-fold inference."
 echo "Cases=${expected_cases}; physical GPU=${GPU}; folds run sequentially."
