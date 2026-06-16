@@ -234,7 +234,7 @@ datalist: {yaml_scalar(str(datalist_path))}
 class_names: [tumor]
 
 num_fold: {folds}
-ensemble: true
+ensemble: false
 num_epochs: {epochs}
 
 algos: segresnet
