@@ -46,13 +46,16 @@ def apply_dints_memory_overrides(work_dir: Path, config_parser: type) -> None:
     )
 
 
-def disable_adaptive_validation(work_dir: Path, config_parser: type) -> None:
+def patch_swinunetr_runtime(work_dir: Path, config_parser: type) -> None:
     config_path = work_dir / "swinunetr_0" / "configs" / "hyper_parameters.yaml"
     if not config_path.is_file():
         raise FileNotFoundError(f"SwinUNETR config not found: {config_path}")
 
     config = config_parser.load_config_file(config_path)
     config["adapt_valid_mode"] = False
+    config["use_pretrain"] = True
+    config["num_workers"] = 2
+    config["num_workers_validation"] = 1
     config_parser.export_config_file(
         config,
         config_path,
@@ -60,6 +63,14 @@ def disable_adaptive_validation(work_dir: Path, config_parser: type) -> None:
         default_flow_style=None,
         sort_keys=False,
     )
+
+    train_path = work_dir / "swinunetr_0" / "scripts" / "train.py"
+    if not train_path.is_file():
+        raise FileNotFoundError(f"SwinUNETR training script not found: {train_path}")
+    train_script = train_path.read_text()
+    patched_script = train_script.replace("pin_memory=True", "pin_memory=False")
+    if patched_script != train_script:
+        train_path.write_text(patched_script)
 
 
 def parse_args() -> argparse.Namespace:
@@ -125,12 +136,12 @@ def main() -> None:
         if missing:
             raise RuntimeError(f"Bundle generation did not create: {', '.join(missing)}")
         apply_dints_memory_overrides(work_dir, ConfigParser)
-        disable_adaptive_validation(work_dir, ConfigParser)
+        patch_swinunetr_runtime(work_dir, ConfigParser)
         print(f"Prepared four bundles in {work_dir}")
         return
 
     apply_dints_memory_overrides(work_dir, ConfigParser)
-    disable_adaptive_validation(work_dir, ConfigParser)
+    patch_swinunetr_runtime(work_dir, ConfigParser)
     runner.train = None
     runner.run()
 
